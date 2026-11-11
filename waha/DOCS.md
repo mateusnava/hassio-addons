@@ -51,21 +51,7 @@ ha info | grep arch
 
 Download or clone the repository from `https://github.com/sushiljain1989/hassio-addons` and copy the entire `waha/` folder into `/addons/` on your HA machine.
 
-#### Step 4 — Edit the Dockerfile for your architecture
-
-Open `waha/Dockerfile` and replace the entire first two lines with a single `FROM` line matching your architecture from Step 2:
-
-For **aarch64 (Raspberry Pi)**:
-```dockerfile
-FROM devlikeapro/waha:arm-2026.4.3
-```
-
-For **amd64 (x86 / NUC / VM)**:
-```dockerfile
-FROM devlikeapro/waha:2026.4.3
-```
-
-#### Step 5 — Install from local add-on store
+#### Step 4 — Install from local add-on store
 
 1. Go to **Settings → Apps → Install app**
 2. The **WAHA WhatsApp** add-on will appear under **Local add-ons**
@@ -75,7 +61,7 @@ FROM devlikeapro/waha:2026.4.3
 
 ## First-Time Setup
 
-> **⚠️ Security:** The default API key and dashboard password in this add-on are public and must be changed before use. Set `WAHA_API_KEY`, `WAHA_DASHBOARD_USERNAME`, and `WAHA_DASHBOARD_PASSWORD` to your own values in the add-on configuration.
+> **⚠️ Security:** The default API key and dashboard password in this add-on are public and must be changed before use. Set `api_key`, `dashboard_username` and `dashboard_password` to your own values in the add-on's **Configuration** tab, then restart the add-on. Use your own key wherever the examples below show `waha_fixed_key_2026`.
 
 After installing and starting the add-on:
 
@@ -98,16 +84,41 @@ This add-on uses the official WAHA Docker image:
 
 | Architecture | Image Tag |
 |---|---|
-| `aarch64` (Raspberry Pi 4/5) | `devlikeapro/waha:arm-2026.4.3` |
-| `amd64` (x86/NUC/VM) | `devlikeapro/waha:2026.4.3` |
+| `aarch64` (Raspberry Pi 4/5) | `devlikeapro/waha:arm-2026.10.1` |
+| `amd64` (x86/NUC/VM) | `devlikeapro/waha:latest-2026.10.1` |
 
-The correct image is selected automatically. Home Assistant builds the add-on locally and injects the right base image for your device's architecture via the `BUILD_FROM` build argument (defined in `build.yaml`).
+The correct image is selected automatically. Home Assistant builds the add-on locally and passes your device's architecture as the `BUILD_ARCH` build argument; the `Dockerfile` uses it to pick the matching image. The WAHA version is set by `WAHA_VERSION` in the `Dockerfile`.
 
 WAHA CORE (free tier) is used. No paid subscription required.
 
 ---
 
+## Configuration
+
+Set these in the add-on's **Configuration** tab:
+
+| Option | Default | Description |
+|---|---|---|
+| `api_key` | `waha_fixed_key_2026` | API key — send it as the `X-Api-Key` header in every REST request |
+| `dashboard_username` | `admin` | Dashboard and Swagger login username |
+| `dashboard_password` | `waha_fixed_password_2026` | Dashboard and Swagger login password |
+| `engine` | `WEBJS` | WhatsApp engine: `WEBJS`, `NOWEB` or `GOWS` |
+| `timezone` | — | Timezone, e.g. `America/Sao_Paulo` |
+| `env_vars` | `[]` | Any other WAHA environment variable, one `NAME=value` per line (see below) |
+
+Options are applied when the add-on starts, so restart it after changing them.
+
+Example `env_vars` to forward incoming messages to a Home Assistant webhook:
+
+```yaml
+env_vars:
+  - WHATSAPP_HOOK_URL=http://homeassistant:8123/api/webhook/whatsapp_incoming
+  - WHATSAPP_HOOK_EVENTS=message
+```
+
 ## Environment Variables
+
+The variables below can be set through `env_vars` (the ones covered by an option above are set for you). The full list is in the [WAHA docs](https://waha.devlike.pro/docs/how-to/config/).
 
 ### Security
 
@@ -347,11 +358,12 @@ rest_command:
 
 ### Receive messages via webhook
 
-To trigger HA automations when a WhatsApp message arrives, set the webhook URL environment variable to your HA webhook:
+To trigger HA automations when a WhatsApp message arrives, add the webhook variables to `env_vars` in the add-on's **Configuration** tab:
 
-```
-WHATSAPP_HOOK_URL=http://homeassistant:8123/api/webhook/whatsapp_incoming
-WHATSAPP_HOOK_EVENTS=message
+```yaml
+env_vars:
+  - WHATSAPP_HOOK_URL=http://homeassistant:8123/api/webhook/whatsapp_incoming
+  - WHATSAPP_HOOK_EVENTS=message
 ```
 
 Then in HA create an automation with a webhook trigger:
@@ -386,7 +398,7 @@ You only need to scan the QR code once. If you **logout** (not stop) the session
 - The session was logged out, not just stopped. Start the session — if it goes to `WORKING` directly, data is persisted. If it goes to `SCAN_QR_CODE`, scan once and it will persist going forward.
 
 **401 Unauthorized**
-- Add the `X-Api-Key: waha_fixed_key_2026` header to all requests.
+- Add the `X-Api-Key` header with your `api_key` (default `waha_fixed_key_2026`) to all requests.
 
 **Message not delivered**
 - Check session status is `WORKING` before sending.

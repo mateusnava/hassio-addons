@@ -12,10 +12,10 @@ WAHA is a self-hosted REST API for WhatsApp. It runs as a Docker container and e
 
 | Architecture | Device | Docker Image |
 |---|---|---|
-| `aarch64` | Raspberry Pi 4, Raspberry Pi 5 | `devlikeapro/waha:arm-2026.4.3` |
-| `amd64` | x86 PC, Intel NUC, VM | `devlikeapro/waha:2026.4.3` |
+| `aarch64` | Raspberry Pi 4, Raspberry Pi 5 | `devlikeapro/waha:arm-2026.10.1` |
+| `amd64` | x86 PC, Intel NUC, VM | `devlikeapro/waha:latest-2026.10.1` |
 
-> **Note:** The `Dockerfile` uses `ARG BUILD_FROM` / `FROM ${BUILD_FROM}`. When you install this add-on, Home Assistant builds it locally and injects the correct base image for your device's architecture from `build.yaml`.
+> **Note:** Home Assistant builds this add-on locally and passes your device's architecture as `BUILD_ARCH`. The `Dockerfile` uses it to pick the matching WAHA image, so no manual changes are needed. The WAHA version is set by `WAHA_VERSION` in the `Dockerfile`.
 
 ## Installation
 
@@ -60,21 +60,7 @@ ha info | grep arch
 
 Download or clone the repository from `https://github.com/sushiljain1989/hassio-addons` and copy the entire `waha/` folder into `/addons/` on your HA machine.
 
-#### Step 4 — Edit the Dockerfile for your architecture
-
-Open `waha/Dockerfile` and replace the entire first two lines with a single `FROM` line matching your architecture from Step 2:
-
-For **aarch64 (Raspberry Pi)**:
-```dockerfile
-FROM devlikeapro/waha:arm-2026.4.3
-```
-
-For **amd64 (x86 / NUC / VM)**:
-```dockerfile
-FROM devlikeapro/waha:2026.4.3
-```
-
-#### Step 5 — Install from local add-on store
+#### Step 4 — Install from local add-on store
 
 1. Go to **Settings → Apps → Install app**
 2. The **WAHA WhatsApp** add-on will appear under **Local add-ons**
@@ -82,7 +68,7 @@ FROM devlikeapro/waha:2026.4.3
 
 ## First-Time Setup
 
-> **⚠️ Security:** The default API key and dashboard password in this add-on are public and must be changed before use. Set `WAHA_API_KEY`, `WAHA_DASHBOARD_USERNAME`, and `WAHA_DASHBOARD_PASSWORD` to your own values in the add-on configuration.
+> **⚠️ Security:** The default API key and dashboard password in this add-on are public and must be changed before use. Set `api_key`, `dashboard_username` and `dashboard_password` to your own values in the add-on's **Configuration** tab, then restart the add-on. Use your own key wherever the examples below show `waha_fixed_key_2026`.
 
 1. Open the Web UI (`http://<your-ha-ip>:3000/dashboard`)
 2. Log in with `admin` / `waha_fixed_password_2026`
@@ -134,22 +120,30 @@ Add to `automations.yaml`:
     - service: rest_command.waha_start_session
 ```
 
-## Environment Variables
+## Configuration
 
-| Variable | Default | Description |
+Set these in the add-on's **Configuration** tab:
+
+| Option | Default | Description |
 |---|---|---|
-| `WAHA_API_KEY` | `waha_fixed_key_2026` | API key for REST requests |
-| `WAHA_DASHBOARD_USERNAME` | `admin` | Dashboard login username |
-| `WAHA_DASHBOARD_PASSWORD` | `waha_fixed_password_2026` | Dashboard login password |
-| `WAHA_DEFAULT_SESSION` | `default` | Default session name |
-| `WAHA_LOCAL_STORE_BASE_DIR` | `/data/.sessions` | Session persistence directory |
-| `WHATSAPP_DEFAULT_ENGINE` | `WEBJS` | WhatsApp engine (`WEBJS`, `NOWEB`, `GOWS`) |
-| `WAHA_LOG_LEVEL` | `info` | Log level (`error`, `warn`, `info`, `debug`) |
-| `WHATSAPP_API_PORT` | `3000` | API port |
-| `TZ` | — | Timezone (e.g. `Europe/Berlin`) |
-| `WHATSAPP_HOOK_URL` | — | Webhook URL for incoming events |
-| `WHATSAPP_HOOK_EVENTS` | — | Events to send to webhook (e.g. `message,session.status`) |
-| `WAHA_CLIENT_DEVICE_NAME` | — | Name shown in WhatsApp Linked Devices |
+| `api_key` | `waha_fixed_key_2026` | API key — send it as the `X-Api-Key` header in every REST request |
+| `dashboard_username` | `admin` | Dashboard and Swagger login username |
+| `dashboard_password` | `waha_fixed_password_2026` | Dashboard and Swagger login password |
+| `engine` | `WEBJS` | WhatsApp engine: `WEBJS`, `NOWEB` or `GOWS` |
+| `timezone` | — | Timezone, e.g. `America/Sao_Paulo` |
+| `env_vars` | `[]` | Any other WAHA environment variable, one `NAME=value` per line (see below) |
+
+Options are applied when the add-on starts, so restart it after changing them.
+
+Example `env_vars` to forward incoming messages to a Home Assistant webhook:
+
+```yaml
+env_vars:
+  - WHATSAPP_HOOK_URL=http://homeassistant:8123/api/webhook/whatsapp_incoming
+  - WHATSAPP_HOOK_EVENTS=message
+```
+
+The full list of WAHA variables is in the [WAHA docs](https://waha.devlike.pro/docs/how-to/config/).
 
 ## Session API Reference
 

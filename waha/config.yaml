@@ -1,6 +1,6 @@
 name: "WAHA WhatsApp"
 description: "WhatsApp HTTP API - Send and receive WhatsApp messages via REST API"
-version: "1.1.0"
+version: "2026.10.1"
 slug: "waha"
 init: false
 arch:
@@ -10,8 +10,21 @@ ports:
   3000/tcp: 3000
 ports_description:
   3000/tcp: "WAHA Web UI and REST API"
-webui: "http://[HOST]:[PORT:3000]"
-map:
-  - data:rw
+webui: "http://[HOST]:[PORT:3000]/dashboard"
 homeassistant: "2023.1.0"
 url: https://waha.devlike.pro
+options:
+  api_key: "waha_fixed_key_2026"
+  dashboard_username: "admin"
+  dashboard_password: "waha_fixed_password_2026"
+  engine: "WEBJS"
+  timezone: ""
+  env_vars: []
+schema:
+  api_key: password
+  dashboard_username: str
+  dashboard_password: password
+  engine: list(WEBJS|NOWEB|GOWS)
+  timezone: str?
+  env_vars:
+    - str
